@@ -6,4 +6,5 @@
     <string name="example_time">3:45</string>
     <string name="dot">●</string>
     <string name="example_size">3,10 MB</string>
+    <string name="random_song">Phát ngẫu nhiên</string>
 </resources>

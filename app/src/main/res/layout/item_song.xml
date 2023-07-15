@@ -10,27 +10,22 @@
     android:paddingVertical="9dp">
 
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardImageSong"
+    <com.makeramen.roundedimageview.RoundedImageView
+        android:id="@+id/imgSong"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        app:cardCornerRadius="10dp">
-
-        <ImageView
-            android:id="@+id/imgSong"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:src="@drawable/icon_music"
-            tools:ignore="ContentDescription" />
-    </androidx.cardview.widget.CardView>
+        app:riv_corner_radius="10dp"
+        android:layout_alignParentStart="true"
+        android:src="@drawable/icon_music"
+        tools:ignore="ContentDescription" />
 
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toEndOf="@+id/cardImageSong"
         android:layout_toStartOf="@+id/imgMore"
-        android:paddingHorizontal="10dp">
+        android:layout_toEndOf="@+id/imgSong"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="10dp">
 
         <TextView
             android:id="@+id/tvNameSong"
@@ -101,9 +96,9 @@
         android:id="@+id/imgMore"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/icon_more_vert_24"
         android:layout_alignParentEnd="true"
         android:layout_centerInParent="true"
+        android:src="@drawable/icon_more_vert_24"
         tools:ignore="ContentDescription" />
 
 

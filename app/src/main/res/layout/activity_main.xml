@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -19,30 +19,43 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            app:titleTextColor="@color/white"
             android:paddingEnd="10dp"
             android:theme="@style/GalaxyZooThemeToolbarDarkOverflow"
+            android:title="@string/app_name"
+            app:layout_scrollFlags="scroll"
+            app:titleTextColor="@color/white"
             tools:ignore="RtlSymmetry" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:visibility="visible" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rcvSongs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/appBar"
+        android:layout_marginBottom="80dp"
         android:clipToPadding="false"
-        android:verticalScrollbarPosition="left"
         android:scrollbarSize="4dp"
         android:scrollbarStyle="outsideOverlay"
         android:scrollbars="vertical"
-        android:visibility="gone" />
+        android:verticalScrollbarPosition="left"
+        android:visibility="visible"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
-</RelativeLayout>
+
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/extFloatingActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="50dp"
+        android:text="@string/random_song"
+        android:textColor="@android:color/black"
+        app:backgroundTintMode="src_over"
+        app:icon="@drawable/icon_shuffle"
+        app:iconTint="@android:color/black"
+        app:layout_anchor="@id/rcvSongs"
+        app:layout_anchorGravity="bottom|right|end" />
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

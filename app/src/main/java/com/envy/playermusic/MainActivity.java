@@ -3,9 +3,12 @@ package com.envy.playermusic;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LayoutAnimationController;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -14,6 +17,7 @@ import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.envy.playermusic.adapters.MusicListAdapter;
 import com.envy.playermusic.databinding.ActivityMainBinding;
@@ -21,12 +25,14 @@ import com.envy.playermusic.listeners.IGetMusic;
 import com.envy.playermusic.listeners.IMusicListener;
 import com.envy.playermusic.models.SongModel;
 import com.envy.playermusic.presenters.GetMusicPresenter;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements IGetMusic, IMusicListener {
+    private static final String TAG = MainActivity.class.getSimpleName();
 
     private ActivityMainBinding binding;
 
@@ -52,6 +58,29 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                 getMusicPresenter.getMusicInLocal();
             }
         }
+
+//        ExtendedFloatingActionButton extendedFab = binding.extendedFab;
+        final ExtendedFloatingActionButton extendedFloatingActionButton = binding.extFloatingActionButton;
+        extendedFloatingActionButton.setOnClickListener(v -> showToast("clicked"));
+
+        binding.rcvSongs.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                if (dy > 0) {
+                    // Vuốt xuống
+                    Log.d(TAG, "onScrolled: " + "down");
+//                    extendedFab.shrink(); // Shrink the FloatingActionButton
+                    extendedFloatingActionButton.shrink();
+
+
+                } else {
+                    // Vuốt lên hoặc mặc định
+                    Log.d(TAG, "onScrolled: " + "up or default");
+//                    extendedFab.extend(); // Extend the FloatingActionButton
+                    extendedFloatingActionButton.extend();
+                }
+            }
+        });
 
 
     }
@@ -85,8 +114,15 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         }
     }
 
+    private void setAnimationRecyclerview(int animResource) {
+        LayoutAnimationController animationController = AnimationUtils.loadLayoutAnimation(this, animResource);
+        binding.rcvSongs.setLayoutAnimation(animationController);
+    }
+
     @Override
     public void onSuccess(List<SongModel> listSong) {
+        setAnimationRecyclerview(R.anim.layout_animation_up_to_down);
+
         MusicListAdapter musicListAdapter = new MusicListAdapter(this, listSong, this);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
         linearLayoutManager.setSmoothScrollbarEnabled(true);
@@ -96,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         }
 
         binding.rcvSongs.setAdapter(musicListAdapter);
-        binding.progressBar.setVisibility(View.GONE);
+//        binding.progressBar.setVisibility(View.GONE);
         binding.rcvSongs.setVisibility(View.VISIBLE);
 
     }
@@ -104,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     @Override
     public void onError(String message) {
         binding.rcvSongs.setVisibility(View.GONE);
-        binding.progressBar.setVisibility(View.GONE);
+//        binding.progressBar.setVisibility(View.GONE);
     }
 
     @Override
@@ -115,6 +151,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     private void showToast(String message) {
         runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
