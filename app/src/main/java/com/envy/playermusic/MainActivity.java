@@ -16,10 +16,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.envy.playermusic.adapters.FilterAdapter;
 import com.envy.playermusic.adapters.MusicListAdapter;
+
 import com.envy.playermusic.databinding.ActivityMainBinding;
 import com.envy.playermusic.listeners.IGetMusic;
 import com.envy.playermusic.listeners.IMusicListener;
@@ -27,6 +30,7 @@ import com.envy.playermusic.models.SongModel;
 import com.envy.playermusic.presenters.GetMusicPresenter;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -37,8 +41,12 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     private ActivityMainBinding binding;
 
     private GetMusicPresenter getMusicPresenter;
+    private MusicListAdapter musicListAdapter;
+    private List<SongModel> songList = new ArrayList<>();
 
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 1;
+    private boolean isGirdView = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +58,8 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         getMusicPresenter = new GetMusicPresenter(this, this);
 
 
+        setDataFilter();
+
         if (!checkPermission()) {
             requestPermission();
             return;
@@ -59,9 +69,22 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
             }
         }
 
+        binding.imgChangeLayout.setOnClickListener(v -> {
+            binding.progressBar.setVisibility(View.VISIBLE);
+            isGirdView = !isGirdView;
+            if (isGirdView) {
+                binding.imgChangeLayout.setImageResource(R.drawable.icon_view_list_24);
+            } else {
+                binding.imgChangeLayout.setImageResource(R.drawable.icon_grid_view_24);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                getMusicPresenter.getMusicInLocal();
+            }
+        });
+
 //        ExtendedFloatingActionButton extendedFab = binding.extendedFab;
         final ExtendedFloatingActionButton extendedFloatingActionButton = binding.extFloatingActionButton;
-        extendedFloatingActionButton.setOnClickListener(v -> showToast("clicked"));
+        extendedFloatingActionButton.setOnClickListener(v -> showToast(songList.size() + ""));
 
         binding.rcvSongs.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -119,32 +142,61 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         binding.rcvSongs.setLayoutAnimation(animationController);
     }
 
+    private List<String> fakeList() {
+        List<String> listFilter = new ArrayList<>();
+        listFilter.add("Danh sách phát");
+        listFilter.add("Đĩa nhạc");
+        listFilter.add("Nghệ sĩ");
+        listFilter.add("Danh sách phát");
+        listFilter.add("Đĩa nhạc");
+        listFilter.add("Nghệ sĩ");
+        return listFilter;
+    }
+
+    private void setDataFilter() {
+        FilterAdapter filterAdapter = new FilterAdapter(this, fakeList());
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        linearLayoutManager.setSmoothScrollbarEnabled(true);
+        binding.rcvFilter.setLayoutManager(linearLayoutManager);
+        binding.rcvFilter.setAdapter(filterAdapter);
+
+    }
+
     @Override
     public void onSuccess(List<SongModel> listSong) {
-        setAnimationRecyclerview(R.anim.layout_animation_up_to_down);
+        this.songList = listSong;
+        runOnUiThread(() -> {
+            setAnimationRecyclerview(R.anim.layout_animation_up_to_down);
+            if (isGirdView) {
+                GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
+                gridLayoutManager.setSmoothScrollbarEnabled(true);
+                musicListAdapter = new MusicListAdapter(this, R.layout.item_song_horizontal, listSong, this);
+                binding.rcvSongs.setLayoutManager(gridLayoutManager);
+            } else {
+                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+                linearLayoutManager.setSmoothScrollbarEnabled(true);
+                musicListAdapter = new MusicListAdapter(this, R.layout.item_song_vertical, listSong, this);
+                binding.rcvSongs.setLayoutManager(linearLayoutManager);
+            }
 
-        MusicListAdapter musicListAdapter = new MusicListAdapter(this, listSong, this);
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        linearLayoutManager.setSmoothScrollbarEnabled(true);
-        binding.rcvSongs.setLayoutManager(linearLayoutManager);
-        if (binding.rcvSongs.getItemDecorationCount() > 0) {
-            binding.rcvSongs.removeItemDecorationAt(0);
-        }
+            if (binding.rcvSongs.getItemDecorationCount() > 0) {
+                binding.rcvSongs.removeItemDecorationAt(0);
+            }
 
-        binding.rcvSongs.setAdapter(musicListAdapter);
-//        binding.progressBar.setVisibility(View.GONE);
-        binding.rcvSongs.setVisibility(View.VISIBLE);
-
+            binding.rcvSongs.setAdapter(musicListAdapter);
+            binding.progressBar.setVisibility(View.GONE);
+            binding.rcvSongs.setVisibility(View.VISIBLE);
+        });
     }
 
     @Override
     public void onError(String message) {
         binding.rcvSongs.setVisibility(View.GONE);
-//        binding.progressBar.setVisibility(View.GONE);
+        binding.progressBar.setVisibility(View.GONE);
     }
 
     @Override
-    public void onClick(List<SongModel> listSong, SongModel currentSong) {
+    public void onClick(List<SongModel> listSong, @NonNull SongModel currentSong) {
         showToast(currentSong.getTitle());
     }
 
@@ -172,15 +224,17 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
             public boolean onQueryTextChange(String newText) {
                 timer.cancel();
                 timer = new Timer();
-                timer.schedule(
-                        new TimerTask() {
-                            @Override
-                            public void run() {
-                                if (newText.length() > 0) {
-                                    showToast(newText);
-                                }
-                            }
-                        },
+                timer.schedule(new TimerTask() {
+                                   @Override
+                                   public void run() {
+
+//                                    showToast(newText);
+                                       runOnUiThread(() -> musicListAdapter.getFilter().filter(newText));
+
+                                   }
+
+                               },
+
                         DELAY
                 );
                 return true;

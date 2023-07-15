@@ -30,20 +30,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.viewHolder>{
+public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.viewHolder> implements Filterable {
     @SuppressLint("StaticFieldLeak")
     private static Context context;
     private static List<SongModel> list;
     private List<SongModel> listOld;
 
+    private int layout;
     private static IMusicListener iMusicListener;
-    private Filter filter;
 
 
-    public MusicListAdapter(Context context, List<SongModel> list, IMusicListener iMusicListener) {
+    public MusicListAdapter(Context context, int layout, List<SongModel> list, IMusicListener iMusicListener) {
         MusicListAdapter.context = context;
         MusicListAdapter.list = list;
         this.listOld = list;
+        this.layout = layout;
         MusicListAdapter.iMusicListener = iMusicListener;
     }
 
@@ -51,7 +52,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     @NonNull
     @Override
     public viewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_song, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(layout, parent, false);
         return new viewHolder(view);
     }
 
@@ -59,7 +60,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     public void onBindViewHolder(@NonNull viewHolder holder, @SuppressLint("RecyclerView") int position) {
         // sort list name a -> z
 
-        Collections.sort(list, SongModel.sortSong);
+//        Collections.sort(list, SongModel.sortSong);
 
         SongModel songData = list.get(position);
 
@@ -88,6 +89,41 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     @Override
     public int getItemCount() {
         return list.size();
+    }
+
+
+    @Override
+    public Filter getFilter() {
+        return new Filter() {
+
+            @Override
+            protected FilterResults performFiltering(CharSequence constraint) {
+                String str = constraint.toString();
+                if (str.isEmpty()) {
+                    list = listOld;
+                } else {
+                    List<SongModel> mList = new ArrayList<>();
+                    for (SongModel item : listOld) {
+                        if (item.getTitle().toLowerCase().contains(str.toLowerCase())) {
+                            mList.add(item);
+                        }
+                    }
+                    list = mList;
+                }
+
+                FilterResults filterResults = new FilterResults();
+                filterResults.values = list;
+                return filterResults;
+            }
+
+
+            @SuppressLint("NotifyDataSetChanged")
+            @Override
+            protected void publishResults(CharSequence constraint, FilterResults results) {
+                list = (List<SongModel>) results.values;
+                notifyDataSetChanged();
+            }
+        };
     }
 
     public static class viewHolder extends RecyclerView.ViewHolder {

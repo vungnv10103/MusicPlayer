@@ -26,13 +26,41 @@
             app:titleTextColor="@color/white"
             tools:ignore="RtlSymmetry" />
 
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rcvFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp" />
+
     </com.google.android.material.appbar.AppBarLayout>
+
+
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingVertical="20dp"
+        android:text="@string/app_name"
+        android:textColor="@color/white"
+        android:visibility="invisible"
+        app:layout_anchor="@id/appBar"
+        app:layout_anchorGravity="end|bottom|right" />
+
+    <ImageView
+        android:id="@+id/imgChangeLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/icon_grid_view_24"
+        app:layout_anchor="@id/tvAppName"
+        app:layout_anchorGravity="bottom|center"
+        tools:ignore="ContentDescription" />
 
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rcvSongs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
         android:layout_marginBottom="80dp"
         android:clipToPadding="false"
         android:scrollbarSize="4dp"
@@ -40,6 +68,8 @@
         android:scrollbars="vertical"
         android:verticalScrollbarPosition="left"
         android:visibility="visible"
+        app:layout_anchor="@id/appBar"
+        app:layout_anchorGravity="bottom"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
 
@@ -47,15 +77,21 @@
         android:id="@+id/extFloatingActionButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
         android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="50dp"
         android:text="@string/random_song"
         android:textColor="@android:color/black"
         app:backgroundTintMode="src_over"
         app:icon="@drawable/icon_shuffle"
-        app:iconTint="@android:color/black"
-        app:layout_anchor="@id/rcvSongs"
-        app:layout_anchorGravity="bottom|right|end" />
+        app:iconTint="@android:color/black" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="visible" />
 
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
