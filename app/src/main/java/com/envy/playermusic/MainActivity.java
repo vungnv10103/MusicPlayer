@@ -1,9 +1,6 @@
 package com.envy.playermusic;
 
-import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,6 +9,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LayoutAnimationController;
+import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,7 +30,6 @@ import com.envy.playermusic.listeners.IGetMusic;
 import com.envy.playermusic.listeners.IMusicListener;
 import com.envy.playermusic.models.SongModel;
 import com.envy.playermusic.presenters.GetMusicPresenter;
-import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.util.ArrayList;
@@ -40,17 +37,18 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import jp.wasabeef.recyclerview.adapters.ScaleInAnimationAdapter;
+
 public class MainActivity extends AppCompatActivity implements IGetMusic, IMusicListener {
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private ActivityMainBinding binding;
+    private boolean isDataLoaded = false;
 
     private GetMusicPresenter getMusicPresenter;
     private MusicListAdapter musicListAdapter;
     private List<SongModel> songList = new ArrayList<>();
     private MenuItem notificationItem;
-    private View actionViewNotification;
-
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 1;
     private boolean isGirdView = false;
     private int badgeCount = 0;
@@ -66,19 +64,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         getMusicPresenter = new GetMusicPresenter(this, this);
 
 
-        setDataFilter();
-
-        if (!checkPermission()) {
-            requestPermission();
-            return;
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                getMusicPresenter.getMusicInLocal();
-            }
-        }
-
         binding.imgChangeLayout.setOnClickListener(v -> {
-            binding.progressBar.setVisibility(View.VISIBLE);
             isGirdView = !isGirdView;
             if (isGirdView) {
                 binding.imgChangeLayout.setImageResource(R.drawable.icon_view_list_24);
@@ -117,8 +103,16 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                 }
             }
         });
+    }
 
-
+    private void checkDataLoaded() {
+        if (isDataLoaded) {
+            binding.progressBar.setVisibility(View.GONE);
+            binding.viewMain.setVisibility(View.VISIBLE);
+        } else {
+            binding.progressBar.setVisibility(View.VISIBLE);
+            binding.viewMain.setVisibility(View.GONE);
+        }
     }
 
     private boolean checkPermission() {
@@ -176,6 +170,8 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     @Override
     public void onSuccess(List<SongModel> listSong) {
         this.songList = listSong;
+
+        isDataLoaded = true;
         runOnUiThread(() -> {
             setAnimationRecyclerview(R.anim.layout_animation_up_to_down);
             if (isGirdView) {
@@ -194,16 +190,25 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                 binding.rcvSongs.removeItemDecorationAt(0);
             }
 
+            // Library Animation Recyclerview
+//            ScaleInAnimationAdapter scaleInAnimationAdapter = new ScaleInAnimationAdapter(musicListAdapter);
+//            scaleInAnimationAdapter.setDuration(5000);
+//            scaleInAnimationAdapter.setInterpolator(new OvershootInterpolator());
+//            scaleInAnimationAdapter.setFirstOnly(false);
+
             binding.rcvSongs.setAdapter(musicListAdapter);
-            binding.progressBar.setVisibility(View.GONE);
-            binding.rcvSongs.setVisibility(View.VISIBLE);
+
+            setDataFilter();
+
         });
+        checkDataLoaded();
     }
 
     @Override
     public void onError(String message) {
-        binding.rcvSongs.setVisibility(View.GONE);
-        binding.progressBar.setVisibility(View.GONE);
+        Log.d(TAG, "onError: " + message);
+        isDataLoaded = false;
+        checkDataLoaded();
     }
 
     @Override
@@ -218,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     private void updateBadgeCountNew(@NonNull MenuItem menuItem, int count) {
         badgeCount = count;
 
-        actionViewNotification = menuItem.getActionView();
+        View actionViewNotification = menuItem.getActionView();
         actionViewNotification.setOnClickListener(v -> showToast("Open Notification Activity"));
         ImageView iconImageView = actionViewNotification.findViewById(R.id.iconImageView);
         TextView badgeTextView = actionViewNotification.findViewById(R.id.badgeTextView);
@@ -243,7 +248,6 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             private Timer timer = new Timer();
-            private final long DELAY = 500;
 
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -254,11 +258,10 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
             public boolean onQueryTextChange(String newText) {
                 timer.cancel();
                 timer = new Timer();
+                long DELAY = 500;
                 timer.schedule(new TimerTask() {
                     @Override
                     public void run() {
-
-//                                    showToast(newText);
                         runOnUiThread(() -> musicListAdapter.getFilter().filter(newText));
                     }
                 }, DELAY);
@@ -267,5 +270,18 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         });
 
         return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    protected void onStart() {
+        if (!checkPermission()) {
+            requestPermission();
+            return;
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                getMusicPresenter.getMusicInLocal();
+            }
+        }
+        super.onStart();
     }
 }
