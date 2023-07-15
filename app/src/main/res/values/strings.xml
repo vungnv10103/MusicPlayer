@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Music Player</string>
     <string name="search">Tìm kiếm</string>
+    <string name="name">Name</string>
+    <string name="artist">Artist</string>
+    <string name="example_time">3:45</string>
+    <string name="dot">●</string>
+    <string name="example_size">3,10 MB</string>
 </resources>
