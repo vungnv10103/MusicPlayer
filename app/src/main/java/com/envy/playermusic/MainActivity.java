@@ -1,6 +1,9 @@
 package com.envy.playermusic;
 
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,6 +12,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LayoutAnimationController;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,12 +27,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.envy.playermusic.adapters.FilterAdapter;
 import com.envy.playermusic.adapters.MusicListAdapter;
-
 import com.envy.playermusic.databinding.ActivityMainBinding;
 import com.envy.playermusic.listeners.IGetMusic;
 import com.envy.playermusic.listeners.IMusicListener;
 import com.envy.playermusic.models.SongModel;
 import com.envy.playermusic.presenters.GetMusicPresenter;
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.util.ArrayList;
@@ -43,9 +48,12 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     private GetMusicPresenter getMusicPresenter;
     private MusicListAdapter musicListAdapter;
     private List<SongModel> songList = new ArrayList<>();
+    private MenuItem notificationItem;
+    private View actionViewNotification;
 
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 1;
     private boolean isGirdView = false;
+    private int badgeCount = 0;
 
 
     @Override
@@ -84,21 +92,26 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
 
 //        ExtendedFloatingActionButton extendedFab = binding.extendedFab;
         final ExtendedFloatingActionButton extendedFloatingActionButton = binding.extFloatingActionButton;
-        extendedFloatingActionButton.setOnClickListener(v -> showToast(songList.size() + ""));
+        extendedFloatingActionButton.setOnLongClickListener(v -> {
+            badgeCount--;
+            updateBadgeCountNew(notificationItem, badgeCount);
+            return true;
+        });
+        extendedFloatingActionButton.setOnClickListener(v -> {
+            badgeCount++;
+            updateBadgeCountNew(notificationItem, badgeCount);
+        });
+
 
         binding.rcvSongs.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 if (dy > 0) {
-                    // Vuốt xuống
-                    Log.d(TAG, "onScrolled: " + "down");
 //                    extendedFab.shrink(); // Shrink the FloatingActionButton
                     extendedFloatingActionButton.shrink();
 
 
                 } else {
-                    // Vuốt lên hoặc mặc định
-                    Log.d(TAG, "onScrolled: " + "up or default");
 //                    extendedFab.extend(); // Extend the FloatingActionButton
                     extendedFloatingActionButton.extend();
                 }
@@ -109,17 +122,14 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     }
 
     private boolean checkPermission() {
-        return (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                == PackageManager.PERMISSION_GRANTED);
+        return (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
     }
 
     private void requestPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)) {
             showToast("READ PERMISSION IS REQUIRED, PLEASE ALLOW FROM SETTINGS");
         }
-        ActivityCompat.requestPermissions(this,
-                new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE},
-                REQUEST_CODE_OPEN_DOCUMENT);
+        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_CODE_OPEN_DOCUMENT);
     }
 
     @Override
@@ -142,6 +152,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         binding.rcvSongs.setLayoutAnimation(animationController);
     }
 
+    @NonNull
     private List<String> fakeList() {
         List<String> listFilter = new ArrayList<>();
         listFilter.add("Danh sách phát");
@@ -204,10 +215,29 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
     }
 
+    private void updateBadgeCountNew(@NonNull MenuItem menuItem, int count) {
+        badgeCount = count;
+
+        actionViewNotification = menuItem.getActionView();
+        actionViewNotification.setOnClickListener(v -> showToast("Open Notification Activity"));
+        ImageView iconImageView = actionViewNotification.findViewById(R.id.iconImageView);
+        TextView badgeTextView = actionViewNotification.findViewById(R.id.badgeTextView);
+
+        if (count <= 0) {
+            badgeTextView.setVisibility(View.GONE);
+        } else {
+            badgeTextView.setVisibility(View.VISIBLE);
+            badgeTextView.setText(String.valueOf(count));
+        }
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_head, menu);
+
+        notificationItem = menu.findItem(R.id.actionNotification);
+        updateBadgeCountNew(notificationItem, 0);
+
         MenuItem searchItem = menu.findItem(R.id.actionSearch);
         SearchView searchView = (SearchView) searchItem.getActionView();
 
@@ -225,22 +255,16 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                 timer.cancel();
                 timer = new Timer();
                 timer.schedule(new TimerTask() {
-                                   @Override
-                                   public void run() {
+                    @Override
+                    public void run() {
 
 //                                    showToast(newText);
-                                       runOnUiThread(() -> musicListAdapter.getFilter().filter(newText));
-
-                                   }
-
-                               },
-
-                        DELAY
-                );
+                        runOnUiThread(() -> musicListAdapter.getFilter().filter(newText));
+                    }
+                }, DELAY);
                 return true;
             }
         });
-
 
         return super.onCreateOptionsMenu(menu);
     }

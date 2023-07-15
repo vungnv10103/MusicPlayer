@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
     <item
         android:id="@+id/actionSearch"
         android:icon="@drawable/icon_search_24"
         android:title="@string/search"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView" />
+    <item
+        android:id="@+id/actionNotification"
+        android:title="@string/notification"
+        app:actionLayout="@layout/custom_menu_item"
+        app:showAsAction="always" />
+
 
 </menu>

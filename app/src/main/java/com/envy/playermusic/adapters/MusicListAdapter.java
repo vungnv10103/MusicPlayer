@@ -5,7 +5,6 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.graphics.Color;
 import android.net.Uri;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,17 +33,17 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     @SuppressLint("StaticFieldLeak")
     private static Context context;
     private static List<SongModel> list;
-    private List<SongModel> listOld;
+    private final List<SongModel> listOld;
 
-    private int layout;
+    private final int layoutItem;
     private static IMusicListener iMusicListener;
 
 
-    public MusicListAdapter(Context context, int layout, List<SongModel> list, IMusicListener iMusicListener) {
+    public MusicListAdapter(Context context, int layoutItem, List<SongModel> list, IMusicListener iMusicListener) {
         MusicListAdapter.context = context;
         MusicListAdapter.list = list;
         this.listOld = list;
-        this.layout = layout;
+        this.layoutItem = layoutItem;
         MusicListAdapter.iMusicListener = iMusicListener;
     }
 
@@ -52,7 +51,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     @NonNull
     @Override
     public viewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(layout, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(layoutItem, parent, false);
         return new viewHolder(view);
     }
 
@@ -60,7 +59,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     public void onBindViewHolder(@NonNull viewHolder holder, @SuppressLint("RecyclerView") int position) {
         // sort list name a -> z
 
-//        Collections.sort(list, SongModel.sortSong);
+        Collections.sort(list, SongModel.sortSong);
 
         SongModel songData = list.get(position);
 
