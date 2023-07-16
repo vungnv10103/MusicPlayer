@@ -26,6 +26,7 @@
         android:layout_marginEnd="-5dp"
         android:background="@drawable/bg_badge"
         android:gravity="center"
+        android:fontFamily="@font/inter_regular"
         android:padding="3dp"
         android:textColor="@android:color/white"
         android:textSize="10sp"
