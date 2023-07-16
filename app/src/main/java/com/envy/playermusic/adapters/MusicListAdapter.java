@@ -22,7 +22,12 @@ import com.envy.playermusic.R;
 import com.envy.playermusic.listeners.IMusicListener;
 import com.envy.playermusic.models.SongModel;
 import com.envy.playermusic.utils.MyMediaPlayer;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.MediaMetadata;
 
+
+import org.jetbrains.annotations.Contract;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -37,13 +42,15 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
 
     private final int layoutItem;
     private static IMusicListener iMusicListener;
+    private static ExoPlayer player;
 
 
-    public MusicListAdapter(Context context, int layoutItem, List<SongModel> list, IMusicListener iMusicListener) {
+    public MusicListAdapter(Context context, int layoutItem, List<SongModel> list, IMusicListener iMusicListener, ExoPlayer player) {
         MusicListAdapter.context = context;
         MusicListAdapter.list = list;
         this.listOld = list;
         this.layoutItem = layoutItem;
+        MusicListAdapter.player = player;
         MusicListAdapter.iMusicListener = iMusicListener;
     }
 
@@ -63,7 +70,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
 
         SongModel songData = list.get(position);
 
-        Uri albumArtwork = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), Long.parseLong(songData.getAlbumId()));
+        Uri albumArtwork = artWorkSong(songData.getAlbumId());
 //        if (context instanceof Activity && !((Activity) context).isFinishing()) {
         Glide.with(context)
                 .load(albumArtwork)
@@ -125,6 +132,10 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
         };
     }
 
+    public static Uri artWorkSong(String albumId) {
+        return ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), Long.parseLong(albumId));
+    }
+
     public static class viewHolder extends RecyclerView.ViewHolder {
         TextView tvNameSong, tvArtist, tvSize, tvLengthSong;
         ImageView img, imgMore;
@@ -140,7 +151,39 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
             itemView.setOnClickListener(v -> {
                 int currentPosition = getAdapterPosition();
                 iMusicListener.onClick(list, list.get(currentPosition));
+                if (!player.isPlaying()) {
+                    player.setMediaItems(getMediaItems(), currentPosition, 0);
+                } else {
+                    player.pause();
+                    player.seekTo(currentPosition, 0);
+                }
+
+                player.prepare();
+                player.play();
             });
+        }
+
+        @NonNull
+        private List<MediaItem> getMediaItems() {
+            List<MediaItem> mediaItems = new ArrayList<>();
+            for (SongModel song : list) {
+                MediaItem mediaItem = new MediaItem.Builder()
+                        .setUri(song.getPath())
+                        .setMediaMetadata(getMetaData(song))
+                        .build();
+
+                mediaItems.add(mediaItem);
+            }
+            return mediaItems;
+        }
+
+        @NonNull
+        @Contract("_ -> new")
+        private MediaMetadata getMetaData(@NonNull SongModel song) {
+            return new MediaMetadata.Builder()
+                    .setTitle(song.getTitle())
+                    .setArtworkUri(artWorkSong(song.getAlbumId()))
+                    .build();
         }
     }
 

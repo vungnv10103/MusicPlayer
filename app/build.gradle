@@ -33,6 +33,8 @@ android {
 
 dependencies {
 
+    // dialogX
+    implementation "com.github.kongzue.DialogX:DialogX:0.0.48"
     // Blur Imageview
     implementation 'com.github.jgabrielfreitas:BlurImageView:1.0.1'
 

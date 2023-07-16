@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -10,9 +10,10 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/viewMain"
         android:layout_width="match_parent"
-        android:visibility="gone"
         android:layout_height="match_parent"
-        android:background="@color/black">
+        android:layout_above="@+id/layoutControlSong"
+        android:background="@color/black"
+        android:visibility="visible">
 
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/appBar"
@@ -46,6 +47,7 @@
             android:id="@+id/tvAppName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_medium"
             android:paddingVertical="20dp"
             android:text="@string/app_name"
             android:textColor="@color/white"
@@ -57,6 +59,7 @@
             android:id="@+id/imgChangeLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:padding="10dp"
             android:src="@drawable/icon_grid_view_24"
             app:layout_anchor="@id/tvAppName"
             app:layout_anchorGravity="bottom|center"
@@ -68,7 +71,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="50dp"
-            android:layout_marginBottom="80dp"
             android:clipToPadding="false"
             android:scrollbarSize="4dp"
             android:scrollbarStyle="outsideOverlay"
@@ -85,7 +87,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="50dp"
+            android:layout_marginBottom="10dp"
+            android:fontFamily="@font/inter_bold"
             android:text="@string/random_song"
             android:textColor="@android:color/black"
             app:backgroundTintMode="src_over"
@@ -99,13 +102,72 @@
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
         android:layout_gravity="center"
         android:theme="@style/progressBarBlue"
-        android:visibility="visible"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:visibility="visible" />
 
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <RelativeLayout
+        android:id="@+id/layoutControlSong"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_alignParentBottom="true"
+        android:background="@color/gray_dark"
+        android:padding="10dp">
+
+        <com.makeramen.roundedimageview.RoundedImageView
+            android:id="@+id/imgSong"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/icon_music" />
+
+        <RelativeLayout
+            android:id="@+id/layoutInformation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_margin="10dp"
+            android:layout_toStartOf="@+id/imgPlayPause"
+            android:layout_toEndOf="@+id/imgSong"
+            tools:ignore="RelativeOverlap">
+
+            <TextView
+                android:id="@+id/tvNameSong"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="marquee"
+                android:singleLine="true"
+                android:fontFamily="@font/inter_bold"
+                android:text="@string/app_name"
+                android:textColor="@color/white" />
+
+            <TextView
+                android:id="@+id/tvArtist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/tvNameSong"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:fontFamily="@font/inter_regular"
+                android:text="@string/app_name"
+                android:textColor="@color/white" />
+        </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/imgPlayPause"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="15dp"
+            android:src="@drawable/icon_pause"
+            tools:ignore="ContentDescription" />
+
+    </RelativeLayout>
+
+
+</RelativeLayout>
