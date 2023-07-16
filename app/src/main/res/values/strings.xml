@@ -9,4 +9,5 @@
     <string name="random_song">Phát ngẫu nhiên</string>
     <string name="play_list">Danh sách phát</string>
     <string name="notification">Thông báo</string>
+    <string name="current_time">0:00</string>
 </resources>
