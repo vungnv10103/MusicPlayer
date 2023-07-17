@@ -168,6 +168,7 @@
             tools:ignore="ContentDescription" />
 
     </RelativeLayout>
+    <include layout="@layout/layout_player"/>
 
 
 </RelativeLayout>

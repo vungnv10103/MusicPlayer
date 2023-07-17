@@ -1,8 +1,11 @@
 package com.envy.playermusic.adapters;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentUris;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.view.LayoutInflater;
@@ -15,9 +18,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.envy.playermusic.MainActivity;
+import com.envy.playermusic.PlayerMusicService;
 import com.envy.playermusic.R;
 import com.envy.playermusic.listeners.IMusicListener;
 import com.envy.playermusic.models.SongModel;
@@ -43,15 +50,17 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
     private final int layoutItem;
     private static IMusicListener iMusicListener;
     private static ExoPlayer player;
+    private static ConstraintLayout playerView;
 
 
-    public MusicListAdapter(Context context, int layoutItem, List<SongModel> list, IMusicListener iMusicListener, ExoPlayer player) {
+    public MusicListAdapter(Context context, int layoutItem, List<SongModel> list, IMusicListener iMusicListener, ExoPlayer player, ConstraintLayout playerView) {
         MusicListAdapter.context = context;
         MusicListAdapter.list = list;
         this.listOld = list;
         this.layoutItem = layoutItem;
         MusicListAdapter.player = player;
         MusicListAdapter.iMusicListener = iMusicListener;
+        MusicListAdapter.playerView = playerView;
     }
 
 
@@ -80,6 +89,12 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
 //        }
         holder.tvNameSong.setText(songData.getTitle());
         holder.tvArtist.setText(songData.getArtist());
+        try {
+            String length = songData.getDuration();
+            holder.tvLengthSong.setText(convertToMMSS(length    ));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         holder.tvLengthSong.setText(convertToMMSS(songData.getDuration()));
 //        Log.d("log", "duration: " + songData.getDuration() + " -name: " + songData.getTitle());
         holder.tvSize.setText(convertFileSize(songData.getSize()));
@@ -149,6 +164,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
             tvLengthSong = itemView.findViewById(R.id.tvLengthSong);
             imgMore = itemView.findViewById(R.id.imgMore);
             itemView.setOnClickListener(v -> {
+                context.startService(new Intent(context.getApplicationContext(), PlayerMusicService.class));
                 int currentPosition = getAdapterPosition();
                 iMusicListener.onClick(list, list.get(currentPosition));
                 if (!player.isPlaying()) {
@@ -160,6 +176,14 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
 
                 player.prepare();
                 player.play();
+
+                playerView.setVisibility(View.VISIBLE);
+
+                // check permission
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+                        PackageManager.PERMISSION_GRANTED){
+                    ((MainActivity) context).recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+                }
             });
         }
 

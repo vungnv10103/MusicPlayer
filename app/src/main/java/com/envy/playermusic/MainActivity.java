@@ -1,36 +1,58 @@
 package com.envy.playermusic;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.ContentUris;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LayoutAnimationController;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
+import androidx.palette.graphics.Palette;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.chibde.visualizer.BarVisualizer;
+import com.chibde.visualizer.CircleVisualizer;
+import com.chibde.visualizer.SquareBarVisualizer;
 import com.envy.playermusic.adapters.FilterAdapter;
 import com.envy.playermusic.adapters.MusicListAdapter;
+
 import com.envy.playermusic.databinding.ActivityMainBinding;
 import com.envy.playermusic.listeners.IGetMusic;
 import com.envy.playermusic.listeners.IMusicListener;
@@ -41,19 +63,24 @@ import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.MediaMetadata;
 import com.google.android.exoplayer2.Player;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.jgabrielfreitas.core.BlurImageView;
 import com.kongzue.dialogx.dialogs.BottomDialog;
 import com.kongzue.dialogx.dialogs.FullScreenDialog;
 import com.kongzue.dialogx.interfaces.OnBindView;
+import com.makeramen.roundedimageview.RoundedImageView;
 
 import org.jetbrains.annotations.Contract;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 public class MainActivity extends AppCompatActivity implements IGetMusic, IMusicListener {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -72,6 +99,21 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
 
     private ExoPlayer exoPlayer;
 
+    public ActivityResultLauncher<String> recordAudioPermissionLauncher;
+    final String recordAudioPermission = Manifest.permission.RECORD_AUDIO;
+    //    wrapper
+    private ConstraintLayout playerView, headWrapper, artworkWrapper, seekBarWrapper, controlWrapper, audioVisualizerWrapper;
+    private ImageView imgBack, imgPrevious, imgNext, imgShuffle, imgRepeat;
+    private BlurImageView imgBlur;
+    private CircleImageView imgSong;
+    private TextView tvName, tvCurrentTime, tvTotalTime, tvPlayPause;
+    private SeekBar seekBar;
+    private SquareBarVisualizer barVisualizer;
+    private int defaultStatusColor;
+    private int repeatMode = 1; // repeat all =1, repeat one = 2, shuffle = 3
+
+    private boolean isBound = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,9 +122,24 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.toolbar);
-        exoPlayer = new ExoPlayer.Builder(this).build();
+        initView();
+//        exoPlayer = new ExoPlayer.Builder(this).build();
         getMusicPresenter = new GetMusicPresenter(this, this);
 
+        // color
+        defaultStatusColor = getWindow().getStatusBarColor();
+
+        getWindow().setNavigationBarColor(ColorUtils.setAlphaComponent(defaultStatusColor, 199));
+        recordAudioPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> {
+            if (result && exoPlayer.isPlaying()) {
+                activeAudioVisualizer();
+            } else {
+                userResponseOnRecordPermission();
+            }
+        });
+
+//        playerControl();
+        doBindService();
 
         binding.imgChangeLayout.setOnClickListener(v -> {
             isGirdView = !isGirdView;
@@ -135,6 +192,317 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                 }
             }
         });
+    }
+
+    private void doBindService() {
+        Intent playerServiceIntent = new Intent(this, PlayerMusicService.class);
+        bindService(playerServiceIntent, playerServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    ServiceConnection playerServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // get service intent
+            PlayerMusicService.ServiceBinder serviceBinder = (PlayerMusicService.ServiceBinder) service;
+            exoPlayer = serviceBinder.getPlayerService().exoPlayer;
+            isBound = true;
+            playerControl();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+
+    private void initView() {
+//        private ConstraintLayout playerView, headWrapper, artworkWrapper, seekBarWrapper, controlWrapper, audioVisualizerWrapper;
+//        private ImageView imgBack, imgSong, imgBlur, imgPrevious, imgNext, imgShuffle, imgRepeat, imgPlayPause;
+//        private TextView tvName, tvCurrentTime, tvTotalTime;
+//        private SeekBar seekBar;
+//        private BarVisualizer barVisualizer;
+
+        playerView = findViewById(R.id.playerView);
+        headWrapper = findViewById(R.id.headWrapper);
+        artworkWrapper = findViewById(R.id.artworkView);
+        seekBarWrapper = findViewById(R.id.seekBarWrapper);
+        controlWrapper = findViewById(R.id.controlWrapper);
+        audioVisualizerWrapper = findViewById(R.id.audioVisualizerWrapper);
+        barVisualizer = findViewById(R.id.visualizer);
+        imgBack = findViewById(R.id.playerClose);
+        imgSong = findViewById(R.id.imgSongPLayer);
+        imgBlur = findViewById(R.id.blurImage);
+        imgPrevious = findViewById(R.id.imgPrevious);
+        imgNext = findViewById(R.id.imgNext);
+        imgShuffle = findViewById(R.id.imgShuffle);
+        imgRepeat = findViewById(R.id.imgRepeat);
+        tvPlayPause = findViewById(R.id.tvPlayPause);
+        seekBar = findViewById(R.id.seekBar);
+        tvName = findViewById(R.id.tvNameSongPlayer);
+        seekBar = findViewById(R.id.seekBar);
+        tvCurrentTime = findViewById(R.id.tvCurrentTimePlayer);
+        tvTotalTime = findViewById(R.id.tvTotalTimePlayer);
+    }
+
+    private void playerControl() {
+        tvName.setSelected(true);
+        imgBack.setOnClickListener(v -> exitPlayerView());
+
+        binding.layoutControlSong.setOnLongClickListener(v -> showPlayerView());
+
+
+        exoPlayer.addListener(new Player.Listener() {
+            @Override
+            public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+                Player.Listener.super.onMediaItemTransition(mediaItem, reason);
+                if (mediaItem != null) {
+                    assert mediaItem.mediaMetadata.title != null;
+                    String title = mediaItem.mediaMetadata.title.toString();
+                    tvName.setText(title);
+                    for (SongModel song : songList) {
+                        if (song.getTitle().contentEquals(title)) {
+                            showControllerSong(song);
+                        }
+                    }
+                    seekBar.setMax((int) exoPlayer.getDuration());
+
+                    imgSong.setImageURI(mediaItem.mediaMetadata.artworkUri);
+
+                    // Rotation Image;
+                    imgSong.startAnimation(loadAnimation());
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (exoPlayer != null) {
+                                seekBar.setProgress((int) exoPlayer.getCurrentPosition());
+                                tvCurrentTime.setText(getReadableTime((int) exoPlayer.getCurrentPosition()));
+                                if (exoPlayer.isPlaying()) {
+                                    tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_pause, 0, 0, 0);
+                                } else {
+                                    tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_play, 0, 0, 0);
+                                }
+                            }
+                            new Handler().postDelayed(this, 50);
+
+                        }
+                    });
+
+
+                    // set audio visualizer
+                    activeAudioVisualizer();
+
+                    updatePlayerColor();
+
+                    if (!exoPlayer.isPlaying()) {
+                        exoPlayer.play();
+                    }
+
+                }
+
+
+            }
+
+            private String getReadableTime(int currentPosition) {
+                String time;
+                int hrs = currentPosition / (1000 * 60 * 60);
+                int min = (currentPosition % (1000 * 60 * 60)) / (1000 * 60);
+                int secs = (((currentPosition % (1000 * 60 * 60)) % (1000 * 60 * 60)) % (1000 * 60)) / 1000;
+
+                if (hrs < 1) {
+                    time = min + ":" + secs;
+                } else {
+                    time = hrs + ":" + min + ":" + secs;
+                }
+                return time;
+
+            }
+
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                Player.Listener.super.onPlaybackStateChanged(playbackState);
+
+                if (playbackState == ExoPlayer.STATE_READY) {
+                    // set value
+                    String title = (String) Objects.requireNonNull(exoPlayer.getCurrentMediaItem()).mediaMetadata.title;
+
+                    imgSong.startAnimation(loadAnimation());
+                    for (SongModel song : songList) {
+                        assert title != null;
+                        if (song.getTitle().contentEquals(title)) {
+                            showControllerSong(song);
+                        }
+                    }
+                    tvName.setText(title);
+                    tvTotalTime.setText(getReadableTime((int) exoPlayer.getDuration()));
+                    seekBar.setMax((int) exoPlayer.getDuration());
+                    tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_pause, 0, 0, 0);
+
+                    // fix after
+                    imgSong.setImageURI(exoPlayer.getCurrentMediaItem().mediaMetadata.artworkUri);
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (exoPlayer != null) {
+                                seekBar.setProgress((int) exoPlayer.getCurrentPosition());
+                                tvCurrentTime.setText(getReadableTime((int) exoPlayer.getCurrentPosition()));
+                                if (exoPlayer.isPlaying()) {
+                                    tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_pause, 0, 0, 0);
+                                } else {
+                                    tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_play, 0, 0, 0);
+                                }
+                            }
+                            new Handler().postDelayed(this, 50);
+
+                        }
+                    });
+
+
+                    // set audio visualizer
+                    activeAudioVisualizer();
+                    updatePlayerColor();
+                } else {
+                    tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_play, 0, 0, 0);
+                }
+            }
+        });
+        imgNext.setOnClickListener(v -> skipToNext());
+        imgPrevious.setOnClickListener(v -> skipToPrevious());
+        tvPlayPause.setOnClickListener(v -> playOrPause());
+
+    }
+
+    private void playOrPause() {
+        if (exoPlayer.isPlaying()) {
+            exoPlayer.pause();
+            imgSong.clearAnimation();
+            tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_play, 0, 0, 0);
+        } else {
+            exoPlayer.play();
+            imgSong.startAnimation(loadAnimation());
+            tvPlayPause.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_pause, 0, 0, 0);
+        }
+        updatePlayerColor();
+    }
+
+    private void skipToPrevious() {
+        if (exoPlayer.hasPreviousMediaItem()) {
+            exoPlayer.seekToPrevious();
+        }
+    }
+
+    private void skipToNext() {
+        if (exoPlayer.hasNextMediaItem()) {
+            exoPlayer.seekToNext();
+        }
+    }
+
+    private boolean showPlayerView() {
+        playerView.setVisibility(View.VISIBLE);
+        updatePlayerColor();
+        return true;
+    }
+
+    private void updatePlayerColor() {
+
+        if (playerView.getVisibility() == View.GONE) {
+            return;
+        }
+        BitmapDrawable bitmapDrawable = (BitmapDrawable) imgSong.getDrawable();
+        if (bitmapDrawable == null) {
+            bitmapDrawable = (BitmapDrawable) ContextCompat.getDrawable(this, R.drawable.music_icon_big);
+        }
+        assert bitmapDrawable != null;
+        Bitmap bitmap = bitmapDrawable.getBitmap();
+
+        imgBlur.setImageBitmap(bitmap);
+        imgBlur.setBlur(4);
+
+        // palette
+        Palette.from(bitmap).generate(palette -> {
+            if (palette != null) {
+                Palette.Swatch swatch = palette.getDarkVibrantSwatch();
+                if (swatch == null) {
+                    swatch = palette.getMutedSwatch();
+                    if (swatch == null) {
+                        swatch = palette.getDominantSwatch();
+                    }
+                }
+                // extract color
+                assert swatch != null;
+                int titleTextColor = swatch.getTitleTextColor();
+                int bodyTextColor = swatch.getBodyTextColor();
+                int rgbColor = swatch.getRgb();
+
+                // set color to player view
+
+                getWindow().setStatusBarColor(rgbColor);
+                getWindow().setNavigationBarColor(rgbColor);
+
+            }
+        });
+
+
+    }
+
+    private Animation loadAnimation() {
+        RotateAnimation rotateAnimation = new RotateAnimation(0, 360, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setInterpolator(new LinearInterpolator());
+        rotateAnimation.setDuration(10000);
+        rotateAnimation.setRepeatCount(Animation.INFINITE);
+        return rotateAnimation;
+    }
+
+    private void exitPlayerView() {
+        playerView.setVisibility(View.GONE);
+        getWindow().setStatusBarColor(defaultStatusColor);
+        getWindow().setNavigationBarColor(ColorUtils.setAlphaComponent(defaultStatusColor, 199));
+
+    }
+
+    private void userResponseOnRecordPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (shouldShowRequestPermissionRationale(recordAudioPermission)) {
+                // show an education UI explaining why we need permission
+                new AlertDialog.Builder(this)
+                        .setTitle("Requesting to show Audio Visualizer")
+                        .setMessage("Allow this app to display audio visualizer when music is playing")
+                        .setPositiveButton("Allow", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                recordAudioPermissionLauncher.launch(recordAudioPermission);
+                            }
+                        })
+                        .setNegativeButton("Deny", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                showToast("You denied to show audio visualizer");
+                                dialog.dismiss();
+                            }
+                        })
+                        .show();
+
+            } else {
+                showToast("You denied to show audio visualizer");
+            }
+        }
+    }
+
+
+    // audio visualizer
+    private void activeAudioVisualizer() {
+        if (ContextCompat.checkSelfPermission(this, recordAudioPermission) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        barVisualizer.setColor(ContextCompat.getColor(this, R.color.white));
+//        barVisualizer.setDensity(100); // 10 - 256
+        barVisualizer.setDensity(50);
+
+// Set Spacing
+        barVisualizer.setGap(2);
+        barVisualizer.setPlayer(exoPlayer.getAudioSessionId());
+
     }
 
     @NonNull
@@ -232,12 +600,12 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
             if (isGirdView) {
                 GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
                 gridLayoutManager.setSmoothScrollbarEnabled(true);
-                musicListAdapter = new MusicListAdapter(this, R.layout.item_song_horizontal, listSong, this, exoPlayer);
+                musicListAdapter = new MusicListAdapter(this, R.layout.item_song_horizontal, listSong, this, exoPlayer, playerView);
                 binding.rcvSongs.setLayoutManager(gridLayoutManager);
             } else {
                 LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
                 linearLayoutManager.setSmoothScrollbarEnabled(true);
-                musicListAdapter = new MusicListAdapter(this, R.layout.item_song_vertical, listSong, this, exoPlayer);
+                musicListAdapter = new MusicListAdapter(this, R.layout.item_song_vertical, listSong, this, exoPlayer, playerView);
                 binding.rcvSongs.setLayoutManager(linearLayoutManager);
             }
 
@@ -363,7 +731,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
 
     }
 
-    private void showControllerSong(SongModel currentSong) {
+    private void showControllerSong(@NonNull SongModel currentSong) {
         binding.layoutControlSong.setVisibility(View.VISIBLE);
         binding.tvNameSong.setText(currentSong.getTitle());
         binding.tvNameSong.setSelected(true);
@@ -408,18 +776,6 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                             .into(imgSong);
                     tvTotalTime.setText(convertToMMSS(currentSong.getDuration()));
 
-                    exoPlayer.addListener(new Player.Listener() {
-
-                        @Override
-                        public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
-                            Player.Listener.super.onMediaItemTransition(mediaItem, reason);
-                        }
-
-                        @Override
-                        public void onPlaybackStateChanged(int playbackState) {
-                            Player.Listener.super.onPlaybackStateChanged(playbackState);
-                        }
-                    });
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -430,9 +786,11 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
                                 tvCurrentTime.setText(convertToMMSS(String.valueOf(exoPlayer.getCurrentPosition())));
                                 if (exoPlayer.isPlaying()) {
                                     imgSong.setRotation(temp);
-                                    imagePlayPause.setImageResource(R.drawable.icon_action_pause_24);
+                                    imagePlayPause.setImageResource(R.drawable.icon_pause);
+                                    binding.imgPlayPause.setImageResource(R.drawable.icon_pause);
                                 } else {
-                                    imagePlayPause.setImageResource(R.drawable.icon_action_play_24);
+                                    binding.imgPlayPause.setImageResource(R.drawable.icon_play);
+                                    imagePlayPause.setImageResource(R.drawable.icon_play);
                                 }
                             }
                             new Handler().postDelayed(this, 50);
@@ -567,7 +925,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 getMusicPresenter.getMusicInLocal();
-                showToast("onStart");
+//                showToast("onStart");
             }
         }
         super.onStart();
@@ -576,21 +934,37 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (exoPlayer.isPlaying()) {
-            exoPlayer.stop();
+        doUnBindService();
+        //        if (exoPlayer.isPlaying()) {
+//            exoPlayer.stop();
+//        }
+//        exoPlayer.release();
+    }
+
+    private void doUnBindService() {
+        if (isBound) {
+            unbindService(playerServiceConnection);
+            isBound = false;
         }
-        exoPlayer.release();
     }
 
     @Override
     protected void onResume() {
-        showToast("onResume");
+//        showToast("onResume");
         super.onResume();
     }
 
     @Override
     protected void onRestart() {
-        showToast("onReStart");
+//        showToast("onReStart");
         super.onRestart();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (playerView.getVisibility() == View.VISIBLE) {
+            playerView.setVisibility(View.GONE);
+        }
+        super.onBackPressed();
     }
 }
