@@ -1,8 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.PlayerMusic" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.PlayerMusic" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
-        <item name="colorPrimary">@color/black</item>
+        <item name="colorPrimaryDark">@color/black</item>
     </style>
 
     <style name="Theme.PlayerMusic" parent="Base.Theme.PlayerMusic" />

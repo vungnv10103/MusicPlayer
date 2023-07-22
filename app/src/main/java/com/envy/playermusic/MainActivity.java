@@ -47,12 +47,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.chibde.visualizer.BarVisualizer;
-import com.chibde.visualizer.CircleVisualizer;
 import com.chibde.visualizer.SquareBarVisualizer;
 import com.envy.playermusic.adapters.FilterAdapter;
 import com.envy.playermusic.adapters.MusicListAdapter;
-
 import com.envy.playermusic.databinding.ActivityMainBinding;
 import com.envy.playermusic.listeners.IGetMusic;
 import com.envy.playermusic.listeners.IMusicListener;
@@ -67,7 +64,6 @@ import com.jgabrielfreitas.core.BlurImageView;
 import com.kongzue.dialogx.dialogs.BottomDialog;
 import com.kongzue.dialogx.dialogs.FullScreenDialog;
 import com.kongzue.dialogx.interfaces.OnBindView;
-import com.makeramen.roundedimageview.RoundedImageView;
 
 import org.jetbrains.annotations.Contract;
 
@@ -95,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
     private MenuItem notificationItem;
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 1;
     private boolean isGirdView = false;
-    private int badgeCount = 0;
+    private int badgeCount = 1;
 
     private ExoPlayer exoPlayer;
 
@@ -121,14 +117,16 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        setSupportActionBar(binding.toolbar);
+
         initView();
+        setSupportActionBar(binding.toolbar);
 //        exoPlayer = new ExoPlayer.Builder(this).build();
         getMusicPresenter = new GetMusicPresenter(this, this);
 
         // color
         defaultStatusColor = getWindow().getStatusBarColor();
 
+//        getWindow().setStatusBarColor(ContextCompat.getColor(this,R.color.black));
         getWindow().setNavigationBarColor(ColorUtils.setAlphaComponent(defaultStatusColor, 199));
         recordAudioPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> {
             if (result && exoPlayer.isPlaying()) {
@@ -162,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         });
         extendedFloatingActionButton.setOnClickListener(v -> {
             badgeCount++;
-//            updateBadgeCountNew(notificationItem, badgeCount);
+            updateBadgeCountNew(notificationItem, badgeCount);
             int randomIndexSong = getRandomNumberInRange(0, songList.size());
             showControllerSong(songList.get(randomIndexSong));
             if (!exoPlayer.isPlaying()) {
@@ -176,6 +174,7 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
             exoPlayer.play();
 
         });
+//        updateBadgeCountNew(notificationItem, badgeCount);
 
 
         binding.rcvSongs.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -649,9 +648,21 @@ public class MainActivity extends AppCompatActivity implements IGetMusic, IMusic
         return ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), Long.parseLong(albumId));
     }
 
+
     @Override
     public void onClick(List<SongModel> listSong, @NonNull SongModel currentSong) {
 //        showToast(currentSong.getTitle());
+        showControllerSong(currentSong);
+        int currentIndex = listSong.lastIndexOf(currentSong);
+        if (!exoPlayer.isPlaying()) {
+            exoPlayer.setMediaItems(getMediaItems(), currentIndex, 0);
+        } else {
+            exoPlayer.pause();
+            exoPlayer.seekTo(currentIndex, 0);
+        }
+
+        exoPlayer.prepare();
+        exoPlayer.play();
 
         FullScreenDialog.show(new OnBindView<FullScreenDialog>(R.layout.music_player) {
             @Override

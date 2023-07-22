@@ -33,7 +33,6 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.MediaMetadata;
 
-
 import org.jetbrains.annotations.Contract;
 
 import java.text.DecimalFormat;
@@ -105,6 +104,17 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
             holder.tvNameSong.setTextColor(Color.parseColor("#FFFFFF"));
         }
         holder.imgMore.setOnClickListener(v -> Toast.makeText(context, "updating", Toast.LENGTH_SHORT).show());
+
+        holder.itemView.setOnClickListener(v -> {
+            iMusicListener.onClick(list, list.get(position));
+//            playerView.setVisibility(View.VISIBLE);
+
+            // check permission
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+                    PackageManager.PERMISSION_GRANTED){
+                ((MainActivity) context).recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            }
+        });
     }
 
     @Override
@@ -164,51 +174,32 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListAdapter.view
             tvLengthSong = itemView.findViewById(R.id.tvLengthSong);
             imgMore = itemView.findViewById(R.id.imgMore);
             itemView.setOnClickListener(v -> {
-                context.startService(new Intent(context.getApplicationContext(), PlayerMusicService.class));
-                int currentPosition = getAdapterPosition();
-                iMusicListener.onClick(list, list.get(currentPosition));
-                if (!player.isPlaying()) {
-                    player.setMediaItems(getMediaItems(), currentPosition, 0);
-                } else {
-                    player.pause();
-                    player.seekTo(currentPosition, 0);
-                }
 
-                player.prepare();
-                player.play();
-
-                playerView.setVisibility(View.VISIBLE);
-
-                // check permission
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
-                        PackageManager.PERMISSION_GRANTED){
-                    ((MainActivity) context).recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
-                }
             });
         }
 
-        @NonNull
-        private List<MediaItem> getMediaItems() {
-            List<MediaItem> mediaItems = new ArrayList<>();
-            for (SongModel song : list) {
-                MediaItem mediaItem = new MediaItem.Builder()
-                        .setUri(song.getPath())
-                        .setMediaMetadata(getMetaData(song))
-                        .build();
-
-                mediaItems.add(mediaItem);
-            }
-            return mediaItems;
-        }
-
-        @NonNull
-        @Contract("_ -> new")
-        private MediaMetadata getMetaData(@NonNull SongModel song) {
-            return new MediaMetadata.Builder()
-                    .setTitle(song.getTitle())
-                    .setArtworkUri(artWorkSong(song.getAlbumId()))
+    }
+    @NonNull
+    private List<MediaItem> getMediaItems() {
+        List<MediaItem> mediaItems = new ArrayList<>();
+        for (SongModel song : list) {
+            MediaItem mediaItem = new MediaItem.Builder()
+                    .setUri(song.getPath())
+                    .setMediaMetadata(getMetaData(song))
                     .build();
+
+            mediaItems.add(mediaItem);
         }
+        return mediaItems;
+    }
+
+    @NonNull
+    @Contract("_ -> new")
+    private MediaMetadata getMetaData(@NonNull SongModel song) {
+        return new MediaMetadata.Builder()
+                .setTitle(song.getTitle())
+                .setArtworkUri(artWorkSong(song.getAlbumId()))
+                .build();
     }
 
     @NonNull
