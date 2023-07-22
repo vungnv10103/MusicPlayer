@@ -9,6 +9,8 @@
 ### Search
 <img src='/public/images/Search.jpg' width='300' height='600'>
 
+### Service
+<img src='/public/images/ForegroundService1.jpg' width='267' height='533'> <img src='/public/images/ForegroundService2.jpg' width='267' height='533'>
 ### PLay Screen
 <img src='/public/images/PLay.jpg' width='267' height='533'> <img src='/public/images/Play3.jpg' width='267' height='533'> <img src='/public/images/Play2.jpg' width='267' height='533'>
 
